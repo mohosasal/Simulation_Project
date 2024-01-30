@@ -2,11 +2,17 @@ import numpy as np
 from enum import Enum
 import random
 
+###########################################################################
+#  Simulation Project Autumn 2023                                         #
+#  MohammadHosein Salimi (99101738)   MohammadReza Shapoori()             #
+#  Dr Bardia Safaee                                                       #
+###########################################################################
 
 
+
+                                     #####################   Define Enums  #####################
 
 class Service(Enum):
-
     CONTRACT_SET = 1
     COMPLAINT_SET = 2
     DOCS_APPROVE = 3
@@ -19,6 +25,19 @@ class Policy_Type(Enum):
     FIFO = 2
     SIRO = 3
 
+
+class Employee_Type(Enum):
+    A = 5
+    B = 7
+    C = 10
+
+class Event(Enum):
+    ARRIVAL = 1
+    CHANGE_EMPLOYEE_SERVICE_TYPE = 2
+    DEPARTURE = 3
+    Service = 4
+
+        ####################  Define Queue Classes  #################
 
 class Self_Q:
 
@@ -53,19 +72,15 @@ class Q_Manager:
         self.all_queues = dict()
 
         self.all_queues[Service.CONTRACT_SET] = Self_Q(Policy_Type.SPT, Service.CONTRACT_SET)
-        self.all_queues[Service.CONTRACT_SET] = Self_Q(Policy_Type.SIRO, Service.CONTRACT_SET)
 
-        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.SPT, Service.COMPLAINT_SET)
-        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.SIRO, Service.COMPLAINT_SET)
+        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.FIFO, Service.COMPLAINT_SET)
 
         self.all_queues[Service.BACHELOR_REQUEST] = Self_Q(Policy_Type.SPT, Service.BACHELOR_REQUEST)
-        self.all_queues[Service.BACHELOR_REQUEST] = Self_Q(Policy_Type.SIRO, Service.BACHELOR_REQUEST)
 
-        self.all_queues[Service.REVISE_REQUEST] = Self_Q(Policy_Type.SPT, Service.REVISE_REQUEST)
         self.all_queues[Service.REVISE_REQUEST] = Self_Q(Policy_Type.SIRO, Service.REVISE_REQUEST)
 
-        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.SPT, Service.DOCS_APPROVE)
-        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.SIRO, Service.DOCS_APPROVE)
+        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.FIFO, Service.DOCS_APPROVE)
+
 
 
         # define employee lists for each queue
@@ -89,11 +104,7 @@ class Q_Manager:
         return False
 
 
-class Type(Enum):
-    A = 5
-    B = 7
-    C = 10
-
+                                    ###################### Define Employee and Customer ######################
 
 class Employee:
     all_employees = []
@@ -134,7 +145,7 @@ class Employee:
         rand = np.random.uniform(0, 1)
         last_queue = self.Queue_to_serve
 
-        if self.type == Type.A:
+        if self.type == Employee_Type.A:
             if self.Queue_to_serve == Service.CONTRACT_SET:
                 if rand <= 0.2:
                     self.Queue_to_serve = Service.COMPLAINT_SET
@@ -142,7 +153,7 @@ class Employee:
                 if rand < 0.1:
                     self.Queue_to_serve = Service.CONTRACT_SET
 
-        elif self.type == Type.B:
+        elif self.type == Employee_Type.B:
             if self.Queue_to_serve == Service.BACHELOR_REQUEST:
                 if rand <= 0.15:
                     self.Queue_to_serve = Service.REVISE_REQUEST
@@ -252,12 +263,7 @@ class Customer:
             x = Customer(random_service)
 
 
-class Event(Enum):
-    ARRIVAL = 1
-    CHANGE_EMPLOYEE_SERVICE_TYPE = 2
-    DEPARTURE = 3
-    Service = 4
-
+                                        ######################## Statistics Class ###########################
 
 class Statistics:
     inter_arrivals = []
@@ -297,27 +303,41 @@ class Statistics:
         Statistics.customer_in_queue_at_t = que_at_sum / Statistics.customer_in_queue_at_t[
             len(Statistics.customer_in_queue_at_t) - 1][1]
 
-    ################################################### initialize objects
 
 
-employee_to_serve = None
+                         ######################### Run the Simulation ###############################
+
+
+########### initial objects
 
 # queues
 queue_box = Q_Manager()
 
 # Employees ( has to be modified)
-Employee(Type.A, Service.COMPLAINT_SET, queue_box)
-Employee(Type.B, Service.CONTRACT_SET, queue_box)
-Employee(Type.C, Service.DOCS_APPROVE, queue_box)
-Employee(Type.A, Service.BACHELOR_REQUEST, queue_box)
-Employee(Type.B, Service.REVISE_REQUEST, queue_box)
-Employee(Type.C, Service.BACHELOR_REQUEST, queue_box)
+
+Employee(Employee_Type.A, Service.COMPLAINT_SET, queue_box)
+Employee(Employee_Type.B, Service.COMPLAINT_SET, queue_box)
+
+Employee(Employee_Type.B, Service.CONTRACT_SET, queue_box)
+Employee(Employee_Type.C, Service.CONTRACT_SET, queue_box)
+
+Employee(Employee_Type.C, Service.DOCS_APPROVE, queue_box)
+Employee(Employee_Type.A, Service.DOCS_APPROVE, queue_box)
+
+Employee(Employee_Type.A, Service.BACHELOR_REQUEST, queue_box)
+Employee(Employee_Type.B, Service.BACHELOR_REQUEST, queue_box)
+
+Employee(Employee_Type.B, Service.REVISE_REQUEST, queue_box)
+Employee(Employee_Type.C, Service.REVISE_REQUEST, queue_box)
+
+
+employee_to_serve = None
 
 # Customers
 initial_number_of_customers = 100
 Customer.generate_customers(initial_number_of_customers)
 
-################################################### initialize statistical variables
+################# initialize statistical variables
 
 # clock things
 clock = 0

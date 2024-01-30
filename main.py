@@ -1,9 +1,7 @@
-from enum import Enum
 
 import numpy as np
-import numpy as np
 from enum import Enum
-from random import *
+import random
 
 
 class Service(Enum):
@@ -233,16 +231,10 @@ class Customer:
     # call this at the begging of the simulation
     @staticmethod
     def generate_customers(num):
-        for i in range(num // 5):
-            x = Customer(Service.REVISE_REQUEST)
-        for i in range(num // 5):
-            x = Customer(Service.BACHELOR_REQUEST)
-        for i in range(num // 5):
-            x = Customer(Service.DOCS_APPROVE)
-        for i in range(num // 5):
-            x = Customer(Service.CONTRACT_SET)
-        for i in range(num // 5):
-            x = Customer(Service.COMPLAINT_SET)
+
+        for i in range(num):
+            random_service = random.choice(list(Service))
+            x = Customer(random_service)
 
 
 class Event(Enum):
@@ -392,7 +384,7 @@ while (clock < max_clock):
         # set the customer attributes based on departure
         the_employee.customer.system_exit_time = clock
         the_employee.customer.service_time_spent += the_employee.customer.service_time_
-        the_employee.remove_customer()
+        the_customer=the_employee.remove_customer()
         print(
             f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
 
@@ -456,7 +448,7 @@ while (clock < max_clock):
         event = Event.DEPARTURE
         clock += Employee.all_employees[next_employee_departure[0]].service_remaining_time
         # update timings
-        Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= Employee.all_employees[
+        if len(Customer.all_customers) >0 :  Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= Employee.all_employees[
             next_employee_departure[0]].service_remaining_time
         for i in Employee.all_employees:
             # update departure remaining times

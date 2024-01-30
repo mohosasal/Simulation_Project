@@ -295,15 +295,21 @@ class Statistics:
 
     @staticmethod
     def set_statistical_means():
+
         Statistics.mean_system_times = sum(Statistics.system_times) / len(Statistics.system_times)
         Statistics.mean_queue_times = sum(Statistics.queue_times) / len(Statistics.queue_times)
 
-        Statistics.mean_customer_in_system_at_t = len(Customer.finished_customers) / Statistics.customer_in_system_at_t[
-            len(Statistics.customer_in_system_at_t) - 1][1]
+
+        sys_at_sum = 0
+        for i in range(len(Statistics.customer_in_system_at_t) - 1):
+            if i > 0: sys_at_sum += Statistics.customer_in_system_at_t[i][1] * (
+                        Statistics.customer_in_system_at_t[i][0] - Statistics.customer_in_system_at_t[i - 1][0])
+        Statistics.mean_customer_in_system_at_t = sys_at_sum / Statistics.customer_in_system_at_t[
+            len(Statistics.customer_in_system_at_t) - 1][0]
 
         que_at_sum = 0
-        for i in Statistics.customer_in_queue_at_t:
-            que_at_sum += i[1]
+        for i in range(len(Statistics.customer_in_queue_at_t)-1):
+           if i >0 : que_at_sum += Statistics.customer_in_queue_at_t[i][1] *(Statistics.customer_in_queue_at_t[i][0]- Statistics.customer_in_queue_at_t[i-1][0])
         Statistics.mean_customer_in_queue_at_t = que_at_sum / Statistics.customer_in_queue_at_t[
             len(Statistics.customer_in_queue_at_t) - 1][0]
 
@@ -318,19 +324,19 @@ queue_box = Q_Manager()
 # Employees ( has to be modified)
 
 Employee(Employee_Type.A, Service.COMPLAINT_SET, queue_box)
-# Employee(Employee_Type.B, Service.COMPLAINT_SET, queue_box)
+#Employee(Employee_Type.B, Service.COMPLAINT_SET, queue_box)
 
 Employee(Employee_Type.B, Service.CONTRACT_SET, queue_box)
-# Employee(Employee_Type.C, Service.CONTRACT_SET, queue_box)
+#Employee(Employee_Type.C, Service.CONTRACT_SET, queue_box)
 
 Employee(Employee_Type.C, Service.DOCS_APPROVE, queue_box)
-# Employee(Employee_Type.A, Service.DOCS_APPROVE, queue_box)
+#Employee(Employee_Type.A, Service.DOCS_APPROVE, queue_box)
 
 Employee(Employee_Type.A, Service.BACHELOR_REQUEST, queue_box)
-# Employee(Employee_Type.B, Service.BACHELOR_REQUEST, queue_box)
+#Employee(Employee_Type.B, Service.BACHELOR_REQUEST, queue_box)
 
 Employee(Employee_Type.B, Service.REVISE_REQUEST, queue_box)
-# Employee(Employee_Type.C, Service.REVISE_REQUEST, queue_box)
+#Employee(Employee_Type.C, Service.REVISE_REQUEST, queue_box)
 
 employee_to_serve = None
 
@@ -557,13 +563,13 @@ print(f"mean of L_q_t : {Statistics.mean_customer_in_queue_at_t}")
 
 ############ with one employee , we got the resaults below :
 
-# mean of W : 446
-# mean of W_q : 421
-# mean of L_t : 9.2
-# mean of L_q_t : 4.8
+# mean of W : 379
+# mean of W_q : 363
+# mean of L_t : 23.2
+# mean of L_q_t : 19.6
 
 ############ with two employee of different types for each queue, we got the resaults below :
 # mean of W : 28.6
 # mean of W_q : 14
-# mean of L_t : 499
-# mean of L_q_t : 2.6
+# mean of L_t : 2,1
+# mean of L_q_t : 0.2

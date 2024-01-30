@@ -1,10 +1,12 @@
-
 import numpy as np
 from enum import Enum
 import random
 
 
+
+
 class Service(Enum):
+
     CONTRACT_SET = 1
     COMPLAINT_SET = 2
     DOCS_APPROVE = 3
@@ -51,10 +53,20 @@ class Q_Manager:
         self.all_queues = dict()
 
         self.all_queues[Service.CONTRACT_SET] = Self_Q(Policy_Type.SPT, Service.CONTRACT_SET)
-        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.FIFO, Service.COMPLAINT_SET)
-        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.FIFO, Service.DOCS_APPROVE)
+        self.all_queues[Service.CONTRACT_SET] = Self_Q(Policy_Type.SIRO, Service.CONTRACT_SET)
+
+        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.SPT, Service.COMPLAINT_SET)
+        self.all_queues[Service.COMPLAINT_SET] = Self_Q(Policy_Type.SIRO, Service.COMPLAINT_SET)
+
         self.all_queues[Service.BACHELOR_REQUEST] = Self_Q(Policy_Type.SPT, Service.BACHELOR_REQUEST)
+        self.all_queues[Service.BACHELOR_REQUEST] = Self_Q(Policy_Type.SIRO, Service.BACHELOR_REQUEST)
+
+        self.all_queues[Service.REVISE_REQUEST] = Self_Q(Policy_Type.SPT, Service.REVISE_REQUEST)
         self.all_queues[Service.REVISE_REQUEST] = Self_Q(Policy_Type.SIRO, Service.REVISE_REQUEST)
+
+        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.SPT, Service.DOCS_APPROVE)
+        self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.SIRO, Service.DOCS_APPROVE)
+
 
         # define employee lists for each queue
 
@@ -179,7 +191,7 @@ class Customer:
         self.service_type_required = service_type_required
         self.arrival_time = 0
         self.service_applier()
-        self.service_time_ = self.service_time()
+        self.service_time_ = self.service_time()[0]
         Customer.all_customers.append(self)
         self.id = Customer.id
         Customer.id += 1
@@ -188,6 +200,9 @@ class Customer:
         self.system_exit_time = 0
 
         self.service_time_spent = 0
+
+    def update_system_time_spent(self, service_time):
+        self.service_time_spent += service_time
 
     def service_applier(self):
 
@@ -262,8 +277,8 @@ class Statistics:
             Statistics.inter_arrivals.append(i.arrival_time)
             sys_time = i.system_exit_time - i.system_enter_time
             Statistics.system_times.append(sys_time)
-            Statistics.queue_times.append(sys_time - i.i.service_time)
-            Statistics.service_times.append(i.service_time)
+            Statistics.queue_times.append(sys_time - i.service_time_)
+            Statistics.service_times.append(i.service_time_)
 
     @staticmethod
     def set_statistical_means():
@@ -299,14 +314,14 @@ Employee(Type.B, Service.REVISE_REQUEST, queue_box)
 Employee(Type.C, Service.BACHELOR_REQUEST, queue_box)
 
 # Customers
-initial_number_of_customers = 10
+initial_number_of_customers = 100
 Customer.generate_customers(initial_number_of_customers)
 
 ################################################### initialize statistical variables
 
 # clock things
 clock = 0
-max_clock = 1000
+max_clock = 10000
 # remaining time shits
 next_customer_arrival_time = Customer.all_customers[len(Customer.all_customers) - 1].arrival_time
 next_employee_queue_change = [0, 0]
@@ -347,9 +362,14 @@ while (clock < max_clock):
         changed_queue = Employee.all_employees[next_employee_queue_change[0]].Queue_type_specifier()
         if changed_queue:
             if Employee.all_employees[next_employee_queue_change[0]].busy:
-                Employee.all_employees[next_employee_queue_change[0]].customer.service_time_spent += (
-                            Employee.all_employees[next_employee_queue_change[0]].customer.service_time_ -
-                            Employee.all_employees[next_employee_queue_change[0]].service_remaining_time)
+
+                Employee.all_employees[next_employee_queue_change[0]].customer.update_system_time_spent((
+                                                                                                                    Employee.all_employees[
+                                                                                                                        next_employee_queue_change[
+                                                                                                                            0]].customer.service_time_ -
+                                                                                                                    Employee.all_employees[
+                                                                                                                        next_employee_queue_change[
+                                                                                                                            0]].service_remaining_time))
 
                 if Employee.all_employees[next_employee_queue_change[0]].service_remaining_time != 0:
                     the_customer = Employee.all_employees[next_employee_queue_change[0]].remove_customer()
@@ -361,6 +381,7 @@ while (clock < max_clock):
                         f" is going back to the {the_customer.service_type_required} queue at {clock} min")
                 else:
                     the_customer.system_exit_time = clock
+                    Customer.finished_customers.append(the_customer)
                     print(
                         f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into queue "
                         f"{Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} but released"
@@ -383,8 +404,9 @@ while (clock < max_clock):
         the_employee = Employee.all_employees[next_employee_departure[0]]
         # set the customer attributes based on departure
         the_employee.customer.system_exit_time = clock
-        the_employee.customer.service_time_spent += the_employee.customer.service_time_
-        the_customer=the_employee.remove_customer()
+        the_employee.customer.update_system_time_spent(the_employee.customer.service_time_)
+        the_customer = the_employee.remove_customer()
+        Customer.finished_customers.append(the_customer)
         print(
             f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
 
@@ -448,7 +470,8 @@ while (clock < max_clock):
         event = Event.DEPARTURE
         clock += Employee.all_employees[next_employee_departure[0]].service_remaining_time
         # update timings
-        if len(Customer.all_customers) >0 :  Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= Employee.all_employees[
+        if len(Customer.all_customers) > 0:  Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= \
+        Employee.all_employees[
             next_employee_departure[0]].service_remaining_time
         for i in Employee.all_employees:
             # update departure remaining times
@@ -481,8 +504,6 @@ while (clock < max_clock):
         event = Event.Service
         # the server to serice the customer is defined in the timings!
 
-
-
     at_system = initial_number_of_customers - len(Customer.all_customers) - len(Customer.finished_customers)
     at_clock = 0
     if type(clock) == int:
@@ -491,18 +512,20 @@ while (clock < max_clock):
         at_clock = clock.flat[0]
 
     if len(Statistics.customer_in_system_at_t) > 0:
-        if Statistics.customer_in_system_at_t[len(Statistics.customer_in_system_at_t)-1][0] !=at_clock:
+        if Statistics.customer_in_system_at_t[len(Statistics.customer_in_system_at_t) - 1][0] != at_clock:
             Statistics.customer_in_system_at_t.append([at_clock, at_system])
             Statistics.customer_in_queue_at_t.append([at_clock, at_system - len(busy_employees)])
-    else :
+    else:
         Statistics.customer_in_system_at_t.append([at_clock, at_system])
         Statistics.customer_in_queue_at_t.append([at_clock, at_system - len(busy_employees)])
 
 ################################################### statistical things!
 
-# final statistics
+# set final statistics
 
 Statistics.set_statictical_lists(Customer.finished_customers)
 Statistics.set_statistical_means()
+
+# you can access statistics from Statistics class
 
 ################################################### the end

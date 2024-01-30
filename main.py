@@ -374,7 +374,7 @@ while (clock < max_clock):
             print(
                 f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} stays in"
                 f" the previous queue at {clock} min")
-            continue
+
 
 
 
@@ -481,10 +481,23 @@ while (clock < max_clock):
         event = Event.Service
         # the server to serice the customer is defined in the timings!
 
-    at_system = initial_number_of_customers - len(Customer.all_customers) - len(Customer.finished_customers)
-    Statistics.customer_in_system_at_t.append([clock, at_system])
 
-    Statistics.customer_in_queue_at_t.append([clock, at_system - len(idles)])
+
+    at_system = initial_number_of_customers - len(Customer.all_customers) - len(Customer.finished_customers)
+    at_clock = 0
+    if type(clock) == int:
+        at_clock = clock
+    elif type(clock) == np.ndarray:
+        at_clock = clock.flat[0]
+
+    if len(Statistics.customer_in_system_at_t) > 0:
+        if Statistics.customer_in_system_at_t[len(Statistics.customer_in_system_at_t)-1][0] !=at_clock:
+            Statistics.customer_in_system_at_t.append([at_clock, at_system])
+            Statistics.customer_in_queue_at_t.append([at_clock, at_system - len(busy_employees)])
+    else :
+        Statistics.customer_in_system_at_t.append([at_clock, at_system])
+        Statistics.customer_in_queue_at_t.append([at_clock, at_system - len(busy_employees)])
+
 ################################################### statistical things!
 
 # final statistics

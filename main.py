@@ -39,6 +39,7 @@ class Self_Q:
             return self.list.pop(0)
         elif self.policy_type == Policy_Type.SIRO:
             return self.list.pop(random.randrange(0, len(self.list)))
+
         else:
             min_index = self.list.index(min(self.list, key=lambda x: x.service_time_))
             return self.list.pop(min_index)
@@ -172,6 +173,7 @@ class Employee:
 
 class Customer:
     all_customers = []
+    finished_customers = []
     id = 0
 
     # do we need other properties like end service , queue num and ... ?
@@ -183,6 +185,11 @@ class Customer:
         Customer.all_customers.append(self)
         self.id = Customer.id
         Customer.id += 1
+
+        self.system_enter_time = 0
+        self.system_exit_time = 0
+
+        self.service_time_spent = 0
 
     def service_applier(self):
 
@@ -245,7 +252,46 @@ class Event(Enum):
     Service = 4
 
 
-################################################### initialize objects
+class Statistics:
+    inter_arrivals = []
+    system_times = []
+    service_times = []
+    queue_times = []
+    customer_in_system_at_t = []
+    customer_in_queue_at_t = []
+    mean_system_times = 0
+    mean_queue_times = 0
+    mean_customer_in_system_at_t = 0
+    mean_customer_in_queue_at_t = 0
+
+    @staticmethod
+    def set_statictical_lists(customers_list):
+        for i in customers_list:
+            Statistics.inter_arrivals.append(i.arrival_time)
+            sys_time = i.system_exit_time - i.system_enter_time
+            Statistics.system_times.append(sys_time)
+            Statistics.queue_times.append(sys_time - i.i.service_time)
+            Statistics.service_times.append(i.service_time)
+
+    @staticmethod
+    def set_statistical_means():
+        Statistics.mean_system_times = sum(Statistics.system_times) / len(Statistics.system_times)
+        Statistics.mean_queue_times = sum(Statistics.queue_times) / len(Statistics.queue_times)
+
+        sys_at_sum = 0
+        for i in Statistics.customer_in_system_at_t:
+            sys_at_sum += i[1]
+        Statistics.customer_in_system_at_t = sys_at_sum / Statistics.customer_in_system_at_t[
+            len(Statistics.customer_in_system_at_t) - 1][1]
+
+        que_at_sum = 0
+        for i in Statistics.customer_in_queue_at_t:
+            que_at_sum += i[1]
+        Statistics.customer_in_queue_at_t = que_at_sum / Statistics.customer_in_queue_at_t[
+            len(Statistics.customer_in_queue_at_t) - 1][1]
+
+    ################################################### initialize objects
+
 
 employee_to_serve = None
 
@@ -261,7 +307,8 @@ Employee(Type.B, Service.REVISE_REQUEST, queue_box)
 Employee(Type.C, Service.BACHELOR_REQUEST, queue_box)
 
 # Customers
-Customer.generate_customers(10)
+initial_number_of_customers = 10
+Customer.generate_customers(initial_number_of_customers)
 
 ################################################### initialize statistical variables
 
@@ -295,6 +342,7 @@ while (clock < max_clock):
 
         # pop the customer and send to queue
         new_customer = Customer.send_next_customer()
+        new_customer.system_enter_time = clock
         queue_box.all_queues[new_customer.service_type_required].put(new_customer)
         # log
         print(
@@ -307,8 +355,12 @@ while (clock < max_clock):
         changed_queue = Employee.all_employees[next_employee_queue_change[0]].Queue_type_specifier()
         if changed_queue:
             if Employee.all_employees[next_employee_queue_change[0]].busy:
-                the_customer = Employee.all_employees[next_employee_queue_change[0]].remove_customer()
+                Employee.all_employees[next_employee_queue_change[0]].customer.service_time_spent += (
+                            Employee.all_employees[next_employee_queue_change[0]].customer.service_time_ -
+                            Employee.all_employees[next_employee_queue_change[0]].service_remaining_time)
+
                 if Employee.all_employees[next_employee_queue_change[0]].service_remaining_time != 0:
+                    the_customer = Employee.all_employees[next_employee_queue_change[0]].remove_customer()
                     # change the customer attribute for ending service
                     queue_box.all_queues[the_customer.service_type_required].put(the_customer)
                     print(
@@ -316,6 +368,7 @@ while (clock < max_clock):
                         f" the {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} queue and the customer {the_customer.id} "
                         f" is going back to the {the_customer.service_type_required} queue at {clock} min")
                 else:
+                    the_customer.system_exit_time = clock
                     print(
                         f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into queue "
                         f"{Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} but released"
@@ -337,8 +390,11 @@ while (clock < max_clock):
 
         the_employee = Employee.all_employees[next_employee_departure[0]]
         # set the customer attributes based on departure
+        the_employee.customer.system_exit_time = clock
+        the_employee.customer.service_time_spent += the_employee.customer.service_time_
         the_employee.remove_customer()
-        print(f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
+        print(
+            f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
 
     if event == Event.Service:
         employee_to_serve.add_customer(queue_box.all_queues[employee_to_serve.Queue_to_serve].pop())
@@ -420,7 +476,7 @@ while (clock < max_clock):
 
         # update timings
         if len(Customer.all_customers) > 0: Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= \
-        Employee.all_employees[next_employee_queue_change[0]].change_type_remaining_time
+            Employee.all_employees[next_employee_queue_change[0]].change_type_remaining_time
         for i in Employee.all_employees:
             # update departure remaining times
             i.change_type_remaining_time -= Employee.all_employees[
@@ -433,8 +489,15 @@ while (clock < max_clock):
         event = Event.Service
         # the server to serice the customer is defined in the timings!
 
+    at_system = initial_number_of_customers - len(Customer.all_customers) - len(Customer.finished_customers)
+    Statistics.customer_in_system_at_t.append([clock, at_system])
+
+    Statistics.customer_in_queue_at_t.append([clock, at_system - len(idles)])
 ################################################### statistical things!
 
-# will implement soon!
+# final statistics
+
+Statistics.set_statictical_lists(Customer.finished_customers)
+Statistics.set_statistical_means()
 
 ################################################### the end

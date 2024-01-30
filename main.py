@@ -2,6 +2,7 @@ import numpy as np
 from enum import Enum
 import random
 
+
 ###########################################################################
 #  Simulation Project Autumn 2023                                         #
 #  MohammadHosein Salimi (99101738)   MohammadReza Shapoori()             #
@@ -9,8 +10,7 @@ import random
 ###########################################################################
 
 
-
-                                     #####################   Define Enums  #####################
+#####################   Define Enums  #####################
 
 class Service(Enum):
     CONTRACT_SET = 1
@@ -31,13 +31,15 @@ class Employee_Type(Enum):
     B = 7
     C = 10
 
+
 class Event(Enum):
     ARRIVAL = 1
     CHANGE_EMPLOYEE_SERVICE_TYPE = 2
     DEPARTURE = 3
     Service = 4
 
-        ####################  Define Queue Classes  #################
+    ####################  Define Queue Classes  #################
+
 
 class Self_Q:
 
@@ -81,8 +83,6 @@ class Q_Manager:
 
         self.all_queues[Service.DOCS_APPROVE] = Self_Q(Policy_Type.FIFO, Service.DOCS_APPROVE)
 
-
-
         # define employee lists for each queue
 
         self.employees_in_charge_of_queue = {
@@ -103,8 +103,8 @@ class Q_Manager:
             if len(value.list) > 0: return True
         return False
 
+        ###################### Define Employee and Customer ######################
 
-                                    ###################### Define Employee and Customer ######################
 
 class Employee:
     all_employees = []
@@ -124,6 +124,12 @@ class Employee:
         Employee.all_employees.append(self)
         self.id = Employee.id
         Employee.id += 1
+
+    def update_service_remaining_time(self, x):
+        self.service_remaining_time = self.service_remaining_time + x
+
+    def update_change_type_remaining_time(self, x):
+        self.change_type_remaining_time = self.change_type_remaining_time + x
 
     def add_customer(self, customer):
 
@@ -182,7 +188,7 @@ class Employee:
 
         self.change_type_remaining_time = self.type.value
         self.change_employee_queue(last_queue)
-        return (last_queue == self.Queue_to_serve)
+        return (last_queue != self.Queue_to_serve)
 
     # has to be called when some emplyee changes queue to server
 
@@ -262,8 +268,8 @@ class Customer:
             random_service = random.choice(list(Service))
             x = Customer(random_service)
 
+            ######################## Statistics Class ###########################
 
-                                        ######################## Statistics Class ###########################
 
 class Statistics:
     inter_arrivals = []
@@ -276,6 +282,7 @@ class Statistics:
     mean_queue_times = 0
     mean_customer_in_system_at_t = 0
     mean_customer_in_queue_at_t = 0
+    log = ""
 
     @staticmethod
     def set_statictical_lists(customers_list):
@@ -291,21 +298,15 @@ class Statistics:
         Statistics.mean_system_times = sum(Statistics.system_times) / len(Statistics.system_times)
         Statistics.mean_queue_times = sum(Statistics.queue_times) / len(Statistics.queue_times)
 
-        sys_at_sum = 0
-        for i in Statistics.customer_in_system_at_t:
-            sys_at_sum += i[1]
-        Statistics.customer_in_system_at_t = sys_at_sum / Statistics.customer_in_system_at_t[
+        Statistics.mean_customer_in_system_at_t = len(Customer.finished_customers) / Statistics.customer_in_system_at_t[
             len(Statistics.customer_in_system_at_t) - 1][1]
 
         que_at_sum = 0
         for i in Statistics.customer_in_queue_at_t:
             que_at_sum += i[1]
-        Statistics.customer_in_queue_at_t = que_at_sum / Statistics.customer_in_queue_at_t[
-            len(Statistics.customer_in_queue_at_t) - 1][1]
+        Statistics.mean_customer_in_system_at_t = que_at_sum / len(Statistics.customer_in_queue_at_t)
 
-
-
-                         ######################### Run the Simulation ###############################
+        ######################### Run the Simulation ###############################
 
 
 ########### initial objects
@@ -330,11 +331,10 @@ Employee(Employee_Type.B, Service.BACHELOR_REQUEST, queue_box)
 Employee(Employee_Type.B, Service.REVISE_REQUEST, queue_box)
 Employee(Employee_Type.C, Service.REVISE_REQUEST, queue_box)
 
-
 employee_to_serve = None
 
 # Customers
-initial_number_of_customers = 100
+initial_number_of_customers = 500
 Customer.generate_customers(initial_number_of_customers)
 
 ################# initialize statistical variables
@@ -372,8 +372,9 @@ while (clock < max_clock):
         new_customer.system_enter_time = clock
         queue_box.all_queues[new_customer.service_type_required].put(new_customer)
         # log
-        print(
-            f"--> Arrival event <--  customer {new_customer.id} is going into queue {new_customer.service_type_required} at {clock} min")
+        # print(
+        #     f"--> Arrival event <--  customer {new_customer.id} is going into queue {new_customer.service_type_required} at {clock} min")
+        Statistics.log = Statistics.log + f"--> Arrival event <--  customer {new_customer.id} is going into queue {new_customer.service_type_required} at {clock} min \n"
 
 
 
@@ -383,38 +384,44 @@ while (clock < max_clock):
         if changed_queue:
             if Employee.all_employees[next_employee_queue_change[0]].busy:
 
-                Employee.all_employees[next_employee_queue_change[0]].customer.update_system_time_spent((
-                                                                                                                    Employee.all_employees[
-                                                                                                                        next_employee_queue_change[
-                                                                                                                            0]].customer.service_time_ -
-                                                                                                                    Employee.all_employees[
-                                                                                                                        next_employee_queue_change[
-                                                                                                                            0]].service_remaining_time))
+                Employee.all_employees[next_employee_queue_change[0]].customer.update_system_time_spent(
+                    (Employee.all_employees[next_employee_queue_change[0]].customer.service_time_ -
+                     Employee.all_employees[
+                         next_employee_queue_change[
+                             0]].service_remaining_time))
 
                 if Employee.all_employees[next_employee_queue_change[0]].service_remaining_time != 0:
                     the_customer = Employee.all_employees[next_employee_queue_change[0]].remove_customer()
                     # change the customer attribute for ending service
                     queue_box.all_queues[the_customer.service_type_required].put(the_customer)
-                    print(
-                        f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into"
-                        f" the {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} queue and the customer {the_customer.id} "
-                        f" is going back to the {the_customer.service_type_required} queue at {clock} min")
+                    # print(
+                    #     f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into"
+                    #     f" the {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} queue and the customer {the_customer.id} "
+                    #     f" is going back to the {the_customer.service_type_required} queue at {clock} min")
+                    Statistics.log = Statistics.log + f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into the {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} queue and the customer {the_customer.id} is going back to the {the_customer.service_type_required} queue at {clock} min \n"
+
                 else:
                     the_customer.system_exit_time = clock
                     Customer.finished_customers.append(the_customer)
-                    print(
-                        f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into queue "
-                        f"{Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} but released"
-                        f" the customer finished at {clock} min")
+                    # print(
+                    #     f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into queue "
+                    #     f"{Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} but released"
+                    #     f" the customer finished at {clock} min")
+                    Statistics.log = Statistics.log + f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} is going into queue {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} but released the customer finished at {clock} min \n"
+
             else:
-                print(
-                    f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} s going into queue"
-                    f" {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} while idle at {clock} min")
+                # print(
+                #     f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} s going into queue"
+                #     f" {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} while idle at {clock} min")
+                Statistics.log = Statistics.log + f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} s going into queue {Employee.all_employees[next_employee_queue_change[0]].Queue_to_serve} while idle at {clock} min\n"
+
 
         else:
-            print(
-                f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} stays in"
-                f" the previous queue at {clock} min")
+            # print(
+            #     f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} stays in"
+            #     f" the previous queue at {clock} min")
+            Statistics.log = Statistics.log + f"--> Change employee queue event <-- employee {Employee.all_employees[next_employee_queue_change[0]].id} stays in the previous queue at {clock} min\n"
+
 
 
 
@@ -427,13 +434,15 @@ while (clock < max_clock):
         the_employee.customer.update_system_time_spent(the_employee.customer.service_time_)
         the_customer = the_employee.remove_customer()
         Customer.finished_customers.append(the_customer)
-        print(
-            f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
+        # print(
+        #     f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min")
+        Statistics.log = Statistics.log + f"--> Departure event <--the employee {the_employee.id} released the customer {the_customer.id} at {clock} min \n"
 
     if event == Event.Service:
         employee_to_serve.add_customer(queue_box.all_queues[employee_to_serve.Queue_to_serve].pop())
-        print(f"--> Service event <-- the employee {employee_to_serve.id} "
-              f"is starting for customer {employee_to_serve.customer.id} from queue {employee_to_serve.Queue_to_serve} at {clock} min")
+        # print(f"--> Service event <-- the employee {employee_to_serve.id} "
+        #       f"is starting for customer {employee_to_serve.customer.id} from queue {employee_to_serve.Queue_to_serve} at {clock} min")
+        Statistics.log = Statistics.log + f"--> Service event <-- the employee {employee_to_serve.id} is starting for customer {employee_to_serve.customer.id} from queue {employee_to_serve.Queue_to_serve} at {clock} min\n"
 
     ##################### event specifier
 
@@ -477,11 +486,11 @@ while (clock < max_clock):
         clock = clock + next_customer_arrival_time
         # update clock and objects timings
         # Customer.all_customers[len(Customer.all_customers) - 1].arrival_time = 0
-        for i in Employee.all_employees:
+        for i in range(len(Employee.all_employees) - 1):
             # update departure remaining times
-            i.change_type_remaining_time -= next_customer_arrival_time
-            if i.busy: i.service_remaining_time -= next_customer_arrival_time
-
+            Employee.all_employees[i].update_change_type_remaining_time(-1 * next_customer_arrival_time)
+            if Employee.all_employees[i].busy: Employee.all_employees[i].update_service_remaining_time(
+                -1 * next_customer_arrival_time)
     # departure event
 
     elif next_employee_departure[1] <= next_employee_queue_change[1] and next_employee_departure[
@@ -491,14 +500,13 @@ while (clock < max_clock):
         clock += Employee.all_employees[next_employee_departure[0]].service_remaining_time
         # update timings
         if len(Customer.all_customers) > 0:  Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= \
-        Employee.all_employees[
-            next_employee_departure[0]].service_remaining_time
-        for i in Employee.all_employees:
+            Employee.all_employees[
+                next_employee_departure[0]].service_remaining_time
+        for i in range(len(Employee.all_employees) - 1):
             # update departure remaining times
-            i.change_type_remaining_time -= Employee.all_employees[
-                next_employee_departure[0]].service_remaining_time
-            if i.busy: i.service_remaining_time -= Employee.all_employees[
-                next_employee_departure[0]].service_remaining_time
+            Employee.all_employees[i].update_change_type_remaining_time(-1 * next_employee_departure[1])
+            if Employee.all_employees[i].busy: Employee.all_employees[i].update_service_remaining_time(
+                -1 * next_employee_departure[1])
 
     # queue change event
 
@@ -512,12 +520,11 @@ while (clock < max_clock):
         # update timings
         if len(Customer.all_customers) > 0: Customer.all_customers[len(Customer.all_customers) - 1].arrival_time -= \
             Employee.all_employees[next_employee_queue_change[0]].change_type_remaining_time
-        for i in Employee.all_employees:
+        for i in range(len(Employee.all_employees) - 1):
             # update departure remaining times
-            i.change_type_remaining_time -= Employee.all_employees[
-                next_employee_queue_change[0]].change_type_remaining_time
-            if i.busy: i.service_remaining_time -= Employee.all_employees[
-                next_employee_queue_change[0]].change_type_remaining_time
+            Employee.all_employees[i].update_change_type_remaining_time(-1 * next_employee_queue_change[1])
+            if Employee.all_employees[i].busy: Employee.all_employees[i].update_service_remaining_time(
+                -1 * next_employee_queue_change[1])
 
     # service event
     else:
@@ -546,6 +553,12 @@ while (clock < max_clock):
 Statistics.set_statictical_lists(Customer.finished_customers)
 Statistics.set_statistical_means()
 
-# you can access statistics from Statistics class
+# save the logs in the file
+with open("log.txt", "w") as f:
+    f.write(Statistics.log)
+
+f.close()
+
+# print the statistical variables and figures
 
 ################################################### the end
